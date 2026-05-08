@@ -1,0 +1,42 @@
+[project]
+name = "idpa-yolo"
+version = "1.0.0"
+description = "IDPA 靶紙偵測與追蹤管線 — YOLO Seg/Pose + Homography + TPS 精修"
+readme = "agent_rule.md"
+requires-python = ">=3.12,<3.13"
+
+dependencies = [
+    # ── 核心電腦視覺 ──
+    "opencv-contrib-python>=4.10",   # 含 TPS (createThinPlateSplineShapeTransformer)
+    "numpy>=2.0",
+    "scipy>=1.13",                   # linear_sum_assignment (匈牙利演算法)
+    "pillow>=12.0",
+
+    # ── YOLO 訓練與推論 ──
+    "ultralytics>=8.4",
+
+    # ── 資料增強 ──
+    "albumentations>=1.4",
+
+    # ── 設定管理 ──
+    "python-dotenv>=1.0",
+
+    # ── PyTorch (CUDA 12.8) ──
+    "torch>=2.11",
+    "torchvision>=0.26",
+
+    # ── 開發與視覺化 ──
+    "matplotlib>=3.9",
+    "ipykernel>=7.0",
+    "tqdm>=4.60",
+]
+
+[tool.uv]
+# PyTorch CUDA wheels 需要從官方 index 取得
+extra-index-url = [
+    "https://download.pytorch.org/whl/cu128",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
