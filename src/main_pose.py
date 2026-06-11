@@ -100,8 +100,8 @@ def run_pipeline():
     ideal_pts_17 = NORMALIZED_POINTS_17 * [target_w - 1, target_h - 1]
     ideal_pts_12 = ideal_pts_17[OUTLINE_INDICES]
 
-    model_path = settings.get_path("result", "train_pose_17kpt", "run7", "weights", "best.pt")
-    video_path = settings.get_path("data", "靶場", "G7_S03.mp4")
+    model_path = settings.get_path("result", "train_pose_17kpt_merged", "run-10", "weights", "best.pt")
+    video_path = settings.get_path("data", "靶場", "G5_S03.mp4")
     model = YOLO(model_path)
 
     cap = cv2.VideoCapture(video_path)

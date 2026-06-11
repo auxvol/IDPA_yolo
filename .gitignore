@@ -13,3 +13,6 @@ datasets/
 data/*
 *.pth
 *.safetensors
+# ©¿²¤°õ¦æµ²ªG
+result/
+runs/

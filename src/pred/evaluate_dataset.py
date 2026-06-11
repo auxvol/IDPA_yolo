@@ -3,6 +3,7 @@ import json
 import numpy as np
 import os
 import glob
+import random
 from ultralytics import YOLO
 
 def expand_polygon(points, margin_x=48, margin_y=24):
@@ -57,14 +58,25 @@ def compute_iou(poly1, poly2, img_size=(3840, 2160)):
         return 0.0
     return intersection / union
 
+import argparse
+
 def main():
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    parser = argparse.ArgumentParser(description="Evaluate YOLO Pose on dataset")
+    parser.add_argument("--model_path", type=str, default="", help="Path to the YOLO model weights")
+    parser.add_argument("--out_dir", type=str, default="", help="Directory to save evaluation results")
+    args = parser.parse_args()
+
+    # evaluate_dataset.py 現在位於 src/pred/ 下，所以需要往上推三層才能到達專案根目錄
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     images_dir = os.path.join(base_dir, "data", "dataset_v1", "images")
     ann_dir = os.path.join(base_dir, "data", "dataset_v1", "annotations")
-    model_path = os.path.join(base_dir, "result", "train_pose_17kpt", "run7", "weights", "best.pt")
-    out_dir = os.path.join(base_dir, "result", "pred")
+    
+    model_path = args.model_path if args.model_path else os.path.join(base_dir, "result", "train_pose_17kpt_merged", "run-10", "weights", "best.pt")
+    out_dir = args.out_dir if args.out_dir else os.path.join(base_dir, "result", "pred")
+    vis_dir = os.path.join(out_dir, "visualizations")
     
     os.makedirs(out_dir, exist_ok=True)
+    os.makedirs(vis_dir, exist_ok=True)
     
     model = YOLO(model_path)
     
@@ -97,6 +109,9 @@ def main():
     }
     
     img_files = glob.glob(os.path.join(images_dir, "*.png")) + glob.glob(os.path.join(images_dir, "*.jpg"))
+    sample_size = min(20, len(img_files))
+    sample_indices = set(random.sample(range(len(img_files)), sample_size))
+    
     total_iou = 0.0
     total_mae = 0.0
     
@@ -160,6 +175,35 @@ def main():
                             "gt_corners": gt_corners.tolist()
                         })
                         success = True
+                        
+                        if i in sample_indices:
+                            # Draw GT (Green)
+                            pts_gt = np.array(gt_corners, np.int32).reshape((-1, 1, 2))
+                            cv2.polylines(img, [pts_gt], isClosed=True, color=(0, 255, 0), thickness=3)
+                            cv2.putText(img, "GT", (pts_gt[0][0][0], max(30, pts_gt[0][0][1] - 10)), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+                            
+                            # Draw Pred (Red)
+                            pts_pred = np.array(pred_corners, np.int32).reshape((-1, 1, 2))
+                            cv2.polylines(img, [pts_pred], isClosed=True, color=(0, 0, 255), thickness=3)
+                            cv2.putText(img, "Pred", (pts_pred[0][0][0], max(30, pts_pred[0][0][1] - 10)), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+                            
+                            # Draw 17 keypoints and skeleton (Cyan)
+                            skeleton = [(i, (i+1)%12) for i in range(12)] + [(12, 15), (15, 16), (13, 15), (15, 14)]
+                            for p1, p2 in skeleton:
+                                if p1 < len(kpts_17) and p2 < len(kpts_17):
+                                    pt1 = (int(kpts_17[p1][0]), int(kpts_17[p1][1]))
+                                    pt2 = (int(kpts_17[p2][0]), int(kpts_17[p2][1]))
+                                    cv2.line(img, pt1, pt2, (255, 255, 0), 2, cv2.LINE_AA)
+                                    
+                            for idx, pt in enumerate(kpts_17):
+                                pt_x, pt_y = int(pt[0]), int(pt[1])
+                                cv2.circle(img, (pt_x, pt_y), 6, (255, 255, 0), -1)
+                                cv2.putText(img, str(idx), (pt_x+5, pt_y-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+                                
+                            text = f"IoU: {iou:.3f} | MAE: {mae:.1f}px"
+                            cv2.putText(img, text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 255), 3)
+                            
+                            cv2.imwrite(os.path.join(vis_dir, basename), img)
                     except np.linalg.LinAlgError:
                         pass
         
