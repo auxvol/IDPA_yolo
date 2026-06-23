@@ -74,41 +74,29 @@ PROJECT_ROOT=
 
 ## 執行方式
 
-### 主程式 — 語意分割管線
+### 1. 單一視窗即時動態計分 (YOLO-Pose)
 
 ```bash
-python src/main.py
+python src/main_pose_scoring.py
 ```
 
-使用 YOLO-Seg 模型進行靶紙偵測：
-- 從分割遮罩邊緣提取輪廓
-- HoughLinesP 直線擬合 → 四邊交點計算
-- Homography 透視校正 → 匈牙利算法匹配 12 特徵點 → TPS 精修
+這支主程式整合了 **YOLO-Pose 標靶追蹤** 與 **動態彈孔計分**。
+- 同時支援多張靶紙的獨立追蹤與變形校正
+- 結合前/後景差分運算，找出靶紙上的新增彈孔
+- 根據 IDPA 幾何定義 (Down 0, Down 1, Down 3) 動態顯示計分結果與命中率儀表板
 - 按 `Q` 或 `ESC` 退出
 
-### 主程式 — 姿勢估計管線
+### 2. 演算法對比測試 (Warped vs Raw)
 
 ```bash
-python src/main_pose.py
+python src/main_compare_scoring.py
 ```
 
-使用 YOLO-Pose 模型直接偵測 17 個關鍵點：
-- 外框 12 點用於 Homography 對齊
-- 全部 17 點用於 TPS 薄板樣條精修
+這支程式用於對比「形變校正後 (Warped)」與「直接在原畫面 (Raw)」進行彈孔偵測的差異。
+- 畫面上半部顯示 Raw 原始視角與彈孔位置
+- 畫面下半部顯示 Warped 透過 TPS 校正成正面的視角與彈孔位置
+- 用於驗證 TPS 形變校正帶來的計分準確度提升
 - 按 `Q` 或 `ESC` 退出
-
-### 測試腳本
-
-```bash
-# Seg 基礎測試（單目標 12 點）
-python src/tests/test_video_pipeline_seg.py
-
-# Seg 進階測試（直線擬合 + TPS）
-python src/tests/test_video_pipeline_seg_lines.py
-
-# Pose 測試（17 點多目標）
-python src/tests/test_video_pipeline_pose.py
-```
 
 ---
 
@@ -174,19 +162,22 @@ video_path = settings.get_path("data", "靶場", "G7_S01.mp4")
 
 ## 演算法流程
 
-```
+```text
 影片輸入
   │
-  ├─ YOLO-Seg 路線 ──────────────────────────────────────┐
-  │   遮罩輪廓 → 多邊形簡化 → HoughLinesP 直線擬合       │
-  │   → 四邊交點計算 → Homography                         │
-  │   → 匈牙利算法匹配 12 點 → TPS 精修                   │
-  │                                                       │
-  ├─ YOLO-Pose 路線 ─────────────────────────────────────┐│
-  │   17 關鍵點直出 → 外框 12 點 Homography               ││
-  │   → 全 17 點 TPS 精修                                 ││
-  │                                                       ││
-  └───────────────── 校正後靶紙影像 ◄─────────────────────┘┘
+  ├─ YOLO-Pose 目標追蹤與幾何校正 ─────────────┐
+  │   1. 17 關鍵點直出                        │
+  │   2. 外框 12 點 Homography 初步對齊       │
+  │   3. 全 17 點 TPS 薄板樣條精修            │
+  │   4. 輸出標準化、完美正面的「靶紙影像」   │
+  │                                           │
+  ├─ 動態彈孔偵測與計分 ───────────────────────┤
+  │   1. 前後景差分運算 (找出新增彈孔)        │
+  │   2. 輪廓提取與面積過濾                   │
+  │   3. 對照 IDPA 標準靶紙幾何區域           │
+  │   4. 判定分數 (Down 0, Down 1, Down 3)    │
+  │                                           │
+  └───────────────── 輸出計分儀表板 ◄─────────┘
 ```
 
 ### 兩階段追蹤機制

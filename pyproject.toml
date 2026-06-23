@@ -1,8 +1,8 @@
 [project]
 name = "idpa-yolo"
 version = "1.0.0"
-description = "IDPA 靶紙偵測與追蹤管線 — YOLO Seg/Pose + Homography + TPS 精修"
-readme = "agent_rule.md"
+description = "IDPA 靶紙偵測與追蹤管線 — YOLO Pose + Homography + TPS 精修 + 彈孔計分"
+readme = "README.md"
 requires-python = ">=3.12,<3.13"
 
 dependencies = [

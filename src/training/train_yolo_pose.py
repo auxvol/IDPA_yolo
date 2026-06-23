@@ -196,7 +196,7 @@ def train_model():
             A.ElasticTransform(alpha=1500, sigma=30, p=0.4),
             
             # === 像素雜訊 ===
-            A.GaussNoise(var_limit=(1.0, 5.0), p=0.2),
+            A.GaussNoise(std_range=(0.1, 0.3), p=0.2),
             A.Blur(blur_limit=3, p=0.3),
             A.MedianBlur(blur_limit=3, p=0.3),
             A.CLAHE(p=0.3),

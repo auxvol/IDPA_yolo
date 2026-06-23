@@ -65,7 +65,7 @@ echo   啟動虛擬環境:
 echo     .venv\Scripts\activate
 echo.
 echo   執行主程式:
-echo     python src\main.py
-echo     python src\main_pose.py
+echo     python src\main_pose_scoring.py
+echo     python src\main_compare_scoring.py
 echo ============================================
 pause

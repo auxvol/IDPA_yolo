@@ -100,7 +100,7 @@ def run_pipeline():
     ideal_pts_17 = NORMALIZED_POINTS_17 * [target_w - 1, target_h - 1]
     ideal_pts_12 = ideal_pts_17[OUTLINE_INDICES]
 
-    model_path = settings.get_path("result", "train_pose_17kpt_merged", "run-10", "weights", "best.pt")
+    model_path = settings.get_path("result", "train_pose_17kpt_merged", "run-3", "weights", "best.pt")
     video_path = settings.get_path("data", "靶場", "G5_S03.mp4")
     model = YOLO(model_path)
 
@@ -108,6 +108,13 @@ def run_pipeline():
     if not cap.isOpened():
         print(f"❌ 錯誤: 無法讀取影片檔案 {video_path}")
         return
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if fps == 0 or math.isnan(fps):
+        fps = 30.0
+
+    video_writers = {}
+    output_dir = settings.get_path("result")
 
     window_name = "YOLO Pose Multi-Target Tracking"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
@@ -373,6 +380,12 @@ def run_pipeline():
                     grid_view[y_offset:y_offset+block_h, x_offset:x_offset+target_w] = t.warped_frame
                     grid_view[y_offset:y_offset+block_h, x_offset+target_w:x_offset+target_w*2] = t.perfect_warped_frame
 
+                    if t.target_id not in video_writers:
+                        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                        out_path = os.path.join(output_dir, f"target_{t.target_id}_warped.mp4")
+                        video_writers[t.target_id] = cv2.VideoWriter(out_path, fourcc, fps, (target_w, target_h))
+                    video_writers[t.target_id].write(t.perfect_warped_frame)
+
             h, w = display_frame.shape[:2]
             ratio = grid_h / h
             resized_display = cv2.resize(display_frame, (int(w * ratio), grid_h))
@@ -393,6 +406,8 @@ def run_pipeline():
             break
 
     cap.release()
+    for w in video_writers.values():
+        w.release()
     cv2.destroyAllWindows()
     print("✅ 處理結束。")
 
